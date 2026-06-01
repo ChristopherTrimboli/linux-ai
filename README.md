@@ -10,4 +10,4 @@ As an avid Ubuntu user I was horribly disgusted with the lack of support for Lin
 3. This is not a local-ai monolith to run all your niche weirdo local AI LLMs and tinker with CUDA.
 
 
-**This is an app for integrating AI intellignece into your Linux computer.**
+**This is an app for integrating AI intelligence into your Linux computer.**
