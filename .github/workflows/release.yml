@@ -1,0 +1,100 @@
+name: Release
+
+# Build production artifacts (CLI binary + .deb + AppImage) and publish them to
+# a GitHub Release. Triggered by pushing a version tag like `v0.1.0`, or run
+# manually with a tag input.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: tag
+        run: echo "tag=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libdbus-1-dev \
+            libxdo-dev \
+            libssl-dev \
+            patchelf \
+            build-essential \
+            file \
+            pkg-config
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build CLI (release)
+        run: cargo build --release -p linux-ai-cli
+
+      - name: Package CLI
+        id: cli
+        run: |
+          mkdir -p dist-cli stage
+          cp target/release/la README.md LICENSE stage/
+          asset="la-${{ steps.tag.outputs.tag }}-x86_64-unknown-linux-gnu.tar.gz"
+          tar -C stage -czf "dist-cli/${asset}" la README.md LICENSE
+          (cd dist-cli && sha256sum "${asset}" > "${asset}.sha256")
+          echo "asset=${asset}" >> "$GITHUB_OUTPUT"
+
+      - name: Build desktop app and publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: desktop
+          tagName: ${{ steps.tag.outputs.tag }}
+          releaseName: "Linux AI Companion ${{ steps.tag.outputs.tag }}"
+          releaseBody: |
+            Automated release for ${{ steps.tag.outputs.tag }}.
+
+            Assets:
+            - Desktop app: `.deb` and `.AppImage`
+            - CLI: `la-*-x86_64-unknown-linux-gnu.tar.gz`
+          releaseDraft: false
+          prerelease: false
+
+      - name: Attach CLI artifacts to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.tag.outputs.tag }}" \
+            "dist-cli/${{ steps.cli.outputs.asset }}" \
+            "dist-cli/${{ steps.cli.outputs.asset }}.sha256" \
+            --clobber
