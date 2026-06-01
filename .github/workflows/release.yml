@@ -1,8 +1,11 @@
 name: Release
 
-# Build production artifacts (CLI binary + .deb + AppImage) and publish them to
-# a GitHub Release. Triggered by pushing a version tag like `v0.1.0`, or run
-# manually with a tag input.
+# Build production artifacts (CLI binary + .deb + AppImage) for x86_64 and
+# aarch64 Linux and publish them to a GitHub Release. Triggered by pushing a
+# version tag like `v0.1.0`, or run manually with a tag input.
+#
+# Uses the multi-platform Tauri pattern: create a draft release, have each
+# matrix target upload its artifacts, then publish the release.
 
 on:
   push:
@@ -18,15 +21,74 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  create-release:
     runs-on: ubuntu-24.04
+    outputs:
+      release_id: ${{ steps.create.outputs.result }}
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - name: Resolve and validate version tag
+        id: tag
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          # Require a semver tag: vMAJOR.MINOR.PATCH with optional -prerelease.
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Tag '$tag' is not a valid version tag (expected vX.Y.Z or vX.Y.Z-rc.1)"
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create draft release
+        id: create
+        uses: actions/github-script@v7
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        with:
+          result-encoding: string
+          script: |
+            const tag = process.env.TAG;
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `Linux AI Companion ${tag}`,
+              body: [
+                `Automated release for ${tag}.`,
+                '',
+                'Assets:',
+                '- Desktop app: `.deb` and `.AppImage` (x86_64 and aarch64)',
+                '- CLI: `la-*-linux-gnu.tar.gz` (x86_64 and aarch64)',
+              ].join('\n'),
+              draft: true,
+              prerelease: false,
+            });
+            return data.id;
+
+  build:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Resolve release tag
-        id: tag
-        run: echo "tag=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+      - name: Stamp version from tag
+        run: |
+          version="${{ needs.create-release.outputs.version }}"
+          # Single source of truth: workspace version drives all crates, and the
+          # desktop bundle inherits it (tauri.conf.json has no version field).
+          sed -i -E "0,/^version = \".*\"/s//version = \"${version}\"/" Cargo.toml
+          (cd desktop && npm version "${version}" --no-git-tag-version --allow-same-version >/dev/null)
+          echo "Building version ${version}"
 
       - name: Install Linux build dependencies
         run: |
@@ -48,6 +110,8 @@ jobs:
 
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.arch }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -68,33 +132,42 @@ jobs:
         run: |
           mkdir -p dist-cli stage
           cp target/release/la README.md LICENSE stage/
-          asset="la-${{ steps.tag.outputs.tag }}-x86_64-unknown-linux-gnu.tar.gz"
+          asset="la-${{ needs.create-release.outputs.tag }}-${{ matrix.arch }}-unknown-linux-gnu.tar.gz"
           tar -C stage -czf "dist-cli/${asset}" la README.md LICENSE
           (cd dist-cli && sha256sum "${asset}" > "${asset}.sha256")
           echo "asset=${asset}" >> "$GITHUB_OUTPUT"
 
-      - name: Build desktop app and publish release
+      - name: Build desktop app and upload to release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: desktop
-          tagName: ${{ steps.tag.outputs.tag }}
-          releaseName: "Linux AI Companion ${{ steps.tag.outputs.tag }}"
-          releaseBody: |
-            Automated release for ${{ steps.tag.outputs.tag }}.
-
-            Assets:
-            - Desktop app: `.deb` and `.AppImage`
-            - CLI: `la-*-x86_64-unknown-linux-gnu.tar.gz`
-          releaseDraft: false
-          prerelease: false
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          tagName: ${{ needs.create-release.outputs.tag }}
 
       - name: Attach CLI artifacts to the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${{ steps.tag.outputs.tag }}" \
+          gh release upload "${{ needs.create-release.outputs.tag }}" \
             "dist-cli/${{ steps.cli.outputs.asset }}" \
             "dist-cli/${{ steps.cli.outputs.asset }}.sha256" \
             --clobber
+
+  publish-release:
+    needs: [create-release, build]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Publish the release
+        uses: actions/github-script@v7
+        env:
+          RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
+        with:
+          script: |
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: Number(process.env.RELEASE_ID),
+              draft: false,
+            });

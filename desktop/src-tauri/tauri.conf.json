@@ -1,7 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Linux AI Companion",
-  "version": "0.1.0",
   "identifier": "dev.linux-ai.app",
   "build": {
     "frontendDist": "../dist",

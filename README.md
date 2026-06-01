@@ -139,8 +139,8 @@ by editing the `[providers.*]` tables in the config and pointing `base_url` at i
 ## Releases
 
 Pushing a version tag builds and publishes a GitHub Release with the production
-artifacts (CLI tarball + `.deb` + AppImage) via
-[.github/workflows/release.yml](.github/workflows/release.yml):
+artifacts for both **x86_64** and **aarch64** Linux (CLI tarball + `.deb` +
+AppImage per arch) via [.github/workflows/release.yml](.github/workflows/release.yml):
 
 ```bash
 git tag v0.1.0
@@ -150,6 +150,17 @@ git push origin v0.1.0
 You can also trigger it manually from the Actions tab (provide the tag as input).
 The workflow uses the committed `Cargo.lock` and `desktop/package-lock.json`, so
 make sure those are committed.
+
+### Versioning
+
+The **git tag is the single source of truth** for a release's version. Tags must
+be semver (`vMAJOR.MINOR.PATCH`, optionally `-rc.1` etc.); the workflow rejects
+anything else. At build time it strips the leading `v` and stamps that version
+into the workspace `Cargo.toml` (which every crate and the CLI inherit) and
+`desktop/package.json`. The desktop bundle has no version of its own in
+`tauri.conf.json` — it inherits the workspace crate version — so the CLI, the
+crates, and the `.deb`/AppImage all carry the exact tag version with nothing to
+keep in sync by hand. The `0.1.0` checked into the repo is just the dev default.
 
 ## Not in v1 (possible future work)
 
