@@ -25,6 +25,12 @@ export const setApiKey = (provider: string, key: string) =>
 export const respondApproval = (id: string, approved: boolean) =>
   invoke<void>("respond_approval", { id, approved });
 
+export const startRecording = () => invoke<void>("start_recording");
+
+export const stopRecording = () => invoke<string>("stop_recording");
+
+export const cancelRecording = () => invoke<void>("cancel_recording");
+
 export function sendMessage(
   conversationId: string,
   text: string,

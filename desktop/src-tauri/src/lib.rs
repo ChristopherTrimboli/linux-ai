@@ -1,7 +1,10 @@
 //! Desktop backend: wires the shared `la-core` engine to Tauri commands and a
 //! streaming IPC channel. Tool approvals round-trip to the UI via a pending map.
 
+mod voice;
+
 use std::collections::HashMap;
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
 use la_core::tools::{ApprovalDecision, ApprovalRequest, Approver};
@@ -11,12 +14,15 @@ use tauri::ipc::Channel;
 use tauri::State;
 use tokio::sync::{mpsc, oneshot};
 
+use voice::RecordingHandle;
+
 type PendingMap = Arc<Mutex<HashMap<String, oneshot::Sender<bool>>>>;
 
 pub struct AppState {
     store: Store,
     config: Mutex<Config>,
     pending: PendingMap,
+    recorder: Mutex<Option<RecordingHandle>>,
 }
 
 #[derive(Serialize)]
@@ -93,6 +99,50 @@ fn set_api_key(provider: String, key: String) -> Result<(), String> {
     la_core::secrets::store_api_key(&provider, &key).map_err(err)
 }
 
+/// Begin capturing audio from the default input device.
+#[tauri::command]
+fn start_recording(state: State<'_, AppState>) -> Result<(), String> {
+    let mut guard = state.recorder.lock().unwrap();
+    if guard.is_some() {
+        return Err("already recording".into());
+    }
+    *guard = Some(voice::start_capture()?);
+    Ok(())
+}
+
+/// Stop capturing, transcribe the recorded audio, and return the text.
+#[tauri::command]
+async fn stop_recording(state: State<'_, AppState>) -> Result<String, String> {
+    let handle = state.recorder.lock().unwrap().take();
+    let handle = handle.ok_or("not recording")?;
+    handle.stop.store(true, Ordering::Relaxed);
+
+    let config = state.config.lock().unwrap().clone();
+
+    // Join the capture thread and encode WAV off the async runtime.
+    let wav = tokio::task::spawn_blocking(move || {
+        let recorded = handle
+            .done
+            .recv()
+            .map_err(|_| "recording thread exited unexpectedly".to_string())??;
+        voice::encode_wav(&recorded)
+    })
+    .await
+    .map_err(err)??;
+
+    la_core::transcribe(&config, wav, "audio.wav")
+        .await
+        .map_err(err)
+}
+
+/// Stop and discard the current recording without transcribing.
+#[tauri::command]
+fn cancel_recording(state: State<'_, AppState>) {
+    if let Some(handle) = state.recorder.lock().unwrap().take() {
+        handle.stop.store(true, Ordering::Relaxed);
+    }
+}
+
 #[tauri::command]
 fn respond_approval(state: State<'_, AppState>, id: String, approved: bool) {
     let sender = state.pending.lock().unwrap().remove(&id);
@@ -167,6 +217,7 @@ pub fn run() {
             store,
             config: Mutex::new(config),
             pending: Arc::new(Mutex::new(HashMap::new())),
+            recorder: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             list_conversations,
@@ -178,6 +229,9 @@ pub fn run() {
             set_config,
             provider_status,
             set_api_key,
+            start_recording,
+            stop_recording,
+            cancel_recording,
             respond_approval,
             send_message,
         ])

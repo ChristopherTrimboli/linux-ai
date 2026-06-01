@@ -10,9 +10,11 @@ pub mod providers;
 pub mod secrets;
 pub mod store;
 pub mod tools;
+pub mod transcribe;
 
 pub use agent::{Agent, AgentEvent, DEFAULT_SYSTEM};
-pub use config::{Config, ProviderConfig, ProviderKind, ToolPolicy};
+pub use config::{Config, ProviderConfig, ProviderKind, SttConfig, ToolPolicy};
+pub use transcribe::transcribe;
 pub use error::{Error, Result};
 pub use message::{ContentBlock, Message, Role};
 pub use store::{Conversation, Store, StoredMessage};

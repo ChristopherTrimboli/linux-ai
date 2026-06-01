@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Linux AI Companion
+GenericName=AI Companion
+Comment=AI chat companion with tool-based access to your computer
+Exec=linux-ai-desktop
+Icon=dev.linux-ai.app
+Terminal=false
+Categories=Utility;
+Keywords=AI;Chat;Assistant;LLM;
+StartupNotify=true
+StartupWMClass=dev.linux-ai.app

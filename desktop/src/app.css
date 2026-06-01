@@ -382,6 +382,56 @@ select optgroup {
   padding: 0 18px;
   border-radius: 10px;
 }
+.composer .row {
+  padding-left: 7px;
+}
+.composer button.mic {
+  align-self: flex-end;
+  height: 40px;
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.composer button.mic:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--bg);
+  border-color: var(--border);
+}
+.composer button.mic.recording {
+  color: #fff;
+  background: var(--danger);
+  border-color: var(--danger);
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+.composer button.mic:disabled {
+  opacity: 0.7;
+}
+.composer button.mic .spin {
+  display: inline-block;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes mic-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(229, 72, 77, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(229, 72, 77, 0);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* empty state */
 .empty {

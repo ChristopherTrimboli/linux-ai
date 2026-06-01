@@ -21,6 +21,38 @@
   let saving = $state(false);
   let message = $state("");
 
+  // Older config files may predate the [stt] section.
+  if (!draft.stt) draft.stt = { provider: "openai", model: "gpt-4o-transcribe" };
+
+  // Suggested transcription models per provider for the /audio/transcriptions
+  // endpoint. The field stays free-text (local servers expose their own names).
+  const sttModelsByProvider: Record<string, string[]> = {
+    openai: ["gpt-4o-transcribe", "gpt-4o-mini-transcribe", "whisper-1"],
+    // OpenRouter requires the fully-qualified slug (e.g. `openai/whisper-1`).
+    openrouter: [
+      "openai/gpt-4o-transcribe",
+      "openai/gpt-4o-mini-transcribe",
+      "openai/whisper-1",
+      "google/chirp-3",
+    ],
+    local: ["whisper-large-v3", "whisper-large-v3-turbo", "whisper-1"],
+  };
+  const sttModelSuggestions = $derived(
+    sttModelsByProvider[draft.stt.provider] ?? [
+      "gpt-4o-transcribe",
+      "whisper-1",
+      "whisper-large-v3",
+    ],
+  );
+
+  function onSttProviderChange() {
+    // When switching provider, snap to its first suggested model unless the
+    // current one is already a known option for it.
+    if (!sttModelSuggestions.includes(draft.stt.model)) {
+      draft.stt.model = sttModelSuggestions[0];
+    }
+  }
+
   const providerNames = $derived(Object.keys(draft.providers));
   const selectedModels = $derived(draft.providers[draft.default_provider]?.models ?? []);
 
@@ -114,6 +146,34 @@
     <div class="field">
       <label for="roots">Allowed filesystem roots (one per line; empty = home)</label>
       <textarea id="roots" rows="3" bind:value={rootsText}></textarea>
+    </div>
+
+    <h3>Voice input (speech-to-text)</h3>
+    <p style="color: var(--text-dim); margin-top: 4px">
+      Audio is recorded locally and sent to this provider's
+      <code>/audio/transcriptions</code> endpoint. Use any OpenAI-compatible STT server.
+    </p>
+    <div class="field">
+      <label for="stt-prov">Provider</label>
+      <select id="stt-prov" bind:value={draft.stt.provider} onchange={onSttProviderChange}>
+        {#each providerNames as name}
+          <option value={name}>{name}</option>
+        {/each}
+      </select>
+    </div>
+    <div class="field">
+      <label for="stt-model">Model</label>
+      <input
+        id="stt-model"
+        list="stt-models"
+        bind:value={draft.stt.model}
+        placeholder="gpt-4o-transcribe"
+      />
+      <datalist id="stt-models">
+        {#each sttModelSuggestions as m}
+          <option value={m}></option>
+        {/each}
+      </datalist>
     </div>
 
     {#if message}

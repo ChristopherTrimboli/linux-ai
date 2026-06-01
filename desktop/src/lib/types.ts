@@ -41,12 +41,18 @@ export interface ToolPolicy {
   shell_deny: string[];
 }
 
+export interface SttConfig {
+  provider: string;
+  model: string;
+}
+
 export interface Config {
   default_provider: string;
   default_model: string;
   max_tokens: number;
   providers: Record<string, ProviderConfig>;
   tools: ToolPolicy;
+  stt: SttConfig;
 }
 
 export type AgentEvent =

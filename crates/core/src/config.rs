@@ -75,6 +75,27 @@ impl Default for ToolPolicy {
     }
 }
 
+/// Speech-to-text settings. Transcription goes through an OpenAI-compatible
+/// `/audio/transcriptions` endpoint, reusing one of the configured providers.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SttConfig {
+    /// Provider key (into `providers`) used for transcription.
+    pub provider: String,
+    /// Transcription model, e.g. `whisper-1` or `gpt-4o-mini-transcribe`.
+    pub model: String,
+}
+
+impl Default for SttConfig {
+    fn default() -> Self {
+        SttConfig {
+            provider: "openai".to_string(),
+            // gpt-4o-transcribe is OpenAI's current best transcription model
+            // (lower WER than whisper-1, same price). Override for local servers.
+            model: "gpt-4o-transcribe".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub default_provider: String,
@@ -84,6 +105,8 @@ pub struct Config {
     pub providers: BTreeMap<String, ProviderConfig>,
     #[serde(default)]
     pub tools: ToolPolicy,
+    #[serde(default)]
+    pub stt: SttConfig,
 }
 
 fn default_max_tokens() -> u32 {
@@ -161,6 +184,7 @@ impl Default for Config {
             max_tokens: default_max_tokens(),
             providers,
             tools: ToolPolicy::default(),
+            stt: SttConfig::default(),
         }
     }
 }

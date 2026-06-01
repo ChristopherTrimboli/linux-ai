@@ -29,6 +29,9 @@
   let sending = $state(false);
   let errorMsg = $state("");
 
+  let recording = $state(false);
+  let transcribing = $state(false);
+
   let liveText = $state("");
   let liveTools = $state<LiveTool[]>([]);
   let approvals = $state<{ id: string; tool: string; summary: string }[]>([]);
@@ -189,6 +192,33 @@
     }
   }
 
+  async function toggleRecording() {
+    if (transcribing) return;
+    if (recording) {
+      recording = false;
+      transcribing = true;
+      try {
+        const text = await api.stopRecording();
+        if (text) {
+          input = input.trim() ? `${input.trim()} ${text}` : text;
+          composerEl?.focus();
+        }
+      } catch (e) {
+        errorMsg = `Transcription failed: ${e}`;
+      } finally {
+        transcribing = false;
+      }
+    } else {
+      errorMsg = "";
+      try {
+        await api.startRecording();
+        recording = true;
+      } catch (e) {
+        errorMsg = `Could not start recording: ${e}`;
+      }
+    }
+  }
+
   async function onSettingsSaved() {
     config = await api.getConfig();
     providers = await api.providerStatus();
@@ -290,9 +320,29 @@
 
     <div class="composer">
       <div class="row">
+        <button
+          class="mic"
+          class:recording
+          onclick={toggleRecording}
+          disabled={transcribing}
+          title={recording ? "Stop & transcribe" : "Record voice"}
+          aria-label={recording ? "Stop recording and transcribe" : "Record voice"}
+        >
+          {#if transcribing}
+            <span class="spin">◌</span>
+          {:else if recording}
+            ■
+          {:else}
+            ●
+          {/if}
+        </button>
         <textarea
           rows="1"
-          placeholder="Message Linux AI…  (Enter to send, Shift+Enter for newline)"
+          placeholder={recording
+            ? "Listening… click ■ to transcribe"
+            : transcribing
+              ? "Transcribing…"
+              : "Message Linux AI…  (Enter to send, Shift+Enter for newline)"}
           bind:value={input}
           bind:this={composerEl}
           onkeydown={onKey}
