@@ -16,6 +16,8 @@ As an avid Ubuntu user I was horribly disgusted with the lack of support for Lin
 
 ## What it is
 
+📖 **Documentation: <https://christophertrimboli.github.io/linux-ai/>**
+
 A Linux-first AI chat companion that can act on your computer through a small set of
 built-in tools, available as both a desktop app and a CLI. Bring your own API key
 (Anthropic, OpenAI, or any OpenAI-compatible endpoint, including a local one).
