@@ -21,7 +21,7 @@ built-in tools, available as both a desktop app and a CLI. Bring your own API ke
 (Anthropic, OpenAI, or any OpenAI-compatible endpoint, including a local one).
 
 - **Desktop app** — Tauri 2 (Rust) + Svelte 5. Tiny, fast, native WebKitGTK.
-- **CLI (`la`)** — one-shot prompts, stdin piping, and an interactive chat REPL.
+- **CLI (`ai`)** — one-shot prompts, stdin piping, and an interactive chat REPL.
 - **Shared Rust core (`la-core`)** — both front ends use the exact same engine:
   multi-provider streaming, tool execution, approval gating, and local history.
 
@@ -69,7 +69,7 @@ Other STT providers work too:
 linux-ai/
   crates/
     core/        # la-core: providers, tools, agent loop, SQLite store, config
-    cli/         # `la` binary
+    cli/         # `ai` binary
   desktop/
     src/         # Svelte 5 + Vite frontend
     src-tauri/   # Tauri 2 Rust app (depends on la-core)
@@ -103,8 +103,8 @@ The CLI and core do **not** require any of the above — only a Rust toolchain.
 
 ```bash
 # from the repo root
-cargo build --release -p linux-ai-cli      # builds ./target/release/la
-cargo install --path crates/cli            # installs `la` onto your PATH
+cargo build --release -p linux-ai-cli      # builds ./target/release/ai
+cargo install --path crates/cli            # installs `ai` onto your PATH
 ```
 
 ### Desktop app
@@ -139,17 +139,17 @@ Restart the app (or log out/in) and the dock will show the real icon.
 ## Using the CLI
 
 ```bash
-la "what is using port 8080?"        # one-shot prompt
-cat error.log | la "explain this"     # pipe stdin into the prompt
-la chat                               # interactive REPL (Ctrl-D / 'exit' to quit)
+ai "what is using port 8080?"        # one-shot prompt
+cat error.log | ai "explain this"     # pipe stdin into the prompt
+ai chat                               # interactive REPL (Ctrl-D / 'exit' to quit)
 
-la providers                          # list providers and whether a key is set
-la models openai                      # list known models for a provider
-la auth anthropic                     # store an API key in the OS keyring
-la config                             # show config + data file locations
+ai providers                          # list providers and whether a key is set
+ai models openai                      # list known models for a provider
+ai auth anthropic                     # store an API key in the OS keyring
+ai config                             # show config + data file locations
 
-la -p openai -m gpt-4o "hello"        # override provider/model for one run
-la -y "tidy up ~/Downloads"           # auto-approve tool actions for this run
+ai -p openai -m gpt-4o "hello"        # override provider/model for one run
+ai -y "tidy up ~/Downloads"           # auto-approve tool actions for this run
 ```
 
 ## Configuration & secrets
@@ -158,7 +158,7 @@ la -y "tidy up ~/Downloads"           # auto-approve tool actions for this run
 - History: `~/.local/share/linux-ai/linux-ai.db` (SQLite).
 - API keys are resolved in this order: **OS keyring** → environment variable
   (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, ...) → plaintext
-  `api_key` in the config. Store keys with `la auth <provider>` or via the desktop
+  `api_key` in the config. Store keys with `ai auth <provider>` or via the desktop
   Settings panel.
 
 Out of the box there are providers for **Anthropic**, **OpenAI**, **OpenRouter**

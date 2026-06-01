@@ -59,7 +59,7 @@ jobs:
                 '',
                 'Assets:',
                 '- Desktop app: `.deb` and `.AppImage` (x86_64 and aarch64)',
-                '- CLI: `la-*-linux-gnu.tar.gz` (x86_64 and aarch64)',
+                '- CLI: `ai-*-linux-gnu.tar.gz` (x86_64 and aarch64)',
               ].join('\n'),
               draft: true,
               prerelease: false,
@@ -132,9 +132,9 @@ jobs:
         id: cli
         run: |
           mkdir -p dist-cli stage
-          cp target/release/la README.md LICENSE stage/
-          asset="la-${{ needs.create-release.outputs.tag }}-${{ matrix.arch }}-unknown-linux-gnu.tar.gz"
-          tar -C stage -czf "dist-cli/${asset}" la README.md LICENSE
+          cp target/release/ai README.md LICENSE stage/
+          asset="ai-${{ needs.create-release.outputs.tag }}-${{ matrix.arch }}-unknown-linux-gnu.tar.gz"
+          tar -C stage -czf "dist-cli/${asset}" ai README.md LICENSE
           (cd dist-cli && sha256sum "${asset}" > "${asset}.sha256")
           echo "asset=${asset}" >> "$GITHUB_OUTPUT"
 
