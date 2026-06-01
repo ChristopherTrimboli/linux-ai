@@ -87,6 +87,9 @@ jobs:
           # Single source of truth: workspace version drives all crates, and the
           # desktop bundle inherits it (tauri.conf.json has no version field).
           sed -i -E "0,/^version = \".*\"/s//version = \"${version}\"/" Cargo.toml
+          # Keep the la-core path dependency in lockstep, or the CLI can't resolve
+          # it once the workspace version moves past the pinned default.
+          sed -i -E "s|(la-core = \{ path = \"crates/core\", version = )\"[^\"]*\"|\1\"${version}\"|" Cargo.toml
           (cd desktop && npm version "${version}" --no-git-tag-version --allow-same-version >/dev/null)
           echo "Building version ${version}"
 
