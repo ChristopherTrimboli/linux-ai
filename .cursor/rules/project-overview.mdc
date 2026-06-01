@@ -1,0 +1,35 @@
+---
+description: Linux AI project overview, architecture, and core conventions
+alwaysApply: true
+---
+
+# Linux AI
+
+Linux-first AI chat app with tool-based computer access. Two front ends — a
+Tauri 2 desktop app and a `lai` CLI — share one Rust core (`la-core`).
+
+## Architecture
+
+- `crates/core/` (`la-core`) — providers, tools, agent loop, SQLite store,
+  config, transcribe. **All shared logic goes here.**
+- `crates/cli/` — the `lai` binary (clap + rustyline).
+- `desktop/src/` — Svelte 5 + Vite UI; `desktop/src-tauri/` — Tauri Rust shell.
+
+Never duplicate provider/tool/agent logic into the CLI or desktop crates; call
+into `la-core` instead.
+
+## Non-negotiables
+
+- **Naming**: product is "Linux AI", CLI command is `lai`. Never reintroduce
+  "companion".
+- **Security defaults**: mutating tools (`run_shell`, `write_file`, `open`)
+  require approval; filesystem tools are confined to configured roots; shell is
+  deny-listed. Don't weaken these.
+- **Keys**: resolve via keyring → env → config. Never hardcode secrets.
+- **Versioning**: git tag `vX.Y.Z` is the source of truth; the release workflow
+  stamps versions. Don't hand-edit them.
+
+## Scope guardrails
+
+Not a local-LLM monolith, not an agentic coding tool. Keep it a lean app for
+integrating AI into the Linux desktop.

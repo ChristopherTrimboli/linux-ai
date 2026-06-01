@@ -1,0 +1,28 @@
+---
+description: Rust conventions for la-core, the CLI, and the Tauri backend
+globs: crates/**/*.rs,desktop/src-tauri/**/*.rs
+alwaysApply: false
+---
+
+# Rust conventions
+
+- Errors: use `anyhow::Result` at boundaries; define typed errors in
+  `crates/core/src/error.rs` for the core's public API. Don't `unwrap()`/`expect()`
+  on fallible runtime paths.
+- Async is `tokio`. LLM streaming uses `eventsource-stream`; keep providers
+  behind the trait in `crates/core/src/providers/mod.rs`.
+- Adding a provider: implement the provider trait under
+  `crates/core/src/providers/`, wire defaults in `config.rs`, and reuse the
+  OpenAI-compatible path for any OpenAI-style endpoint.
+- Adding a tool: add it in `crates/core/src/tools/builtins.rs`, classify it
+  read-only vs mutating, and gate mutating tools behind approval. Respect the
+  configured filesystem roots and the shell deny-list.
+- Verify with `cargo build -p linux-ai-cli` (core + CLI need no system libs).
+
+```rust
+// ❌ swallow / panic
+let cfg = load_config().unwrap();
+
+// ✅ propagate with context
+let cfg = load_config().context("loading config")?;
+```

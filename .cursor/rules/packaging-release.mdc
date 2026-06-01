@@ -1,0 +1,21 @@
+---
+description: Packaging and release rules (versioning, bundles, workflows)
+globs: .github/workflows/*.yml,snap/**,packaging/**,desktop/src-tauri/tauri.conf.json,Cargo.toml
+alwaysApply: false
+---
+
+# Packaging & releases
+
+- **Single source of truth = the git tag** (`vX.Y.Z`). The release workflow
+  stamps the workspace `version`, the `la-core` dependency `version`, and
+  `desktop/package.json`. If you touch versioning, update **all three** stamps
+  together — a stale `la-core` dep version breaks CLI resolution.
+- `tauri.conf.json` has **no** `version` field; it inherits the workspace crate
+  version. Bundle targets are `deb`, `rpm`, `appimage`.
+- Distribution channels and their files:
+  - Snap → `snap/snapcraft.yaml` (name `linux-ai`, strict confinement).
+  - Flatpak → `packaging/flatpak/dev.linux_ai.app.yml` (id uses `_`, not `-`).
+  - AUR → `packaging/aur/PKGBUILD` (`linux-ai-bin`, repacks the `.deb`).
+  - crates.io → `.github/workflows/publish-crates.yml` (`la-core` then
+    `linux-ai-cli`).
+- Keep CLI artifact/name as `lai`. Keep the product name "Linux AI".

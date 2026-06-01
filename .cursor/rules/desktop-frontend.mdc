@@ -1,0 +1,23 @@
+---
+description: Svelte 5 + Tauri frontend conventions for the desktop app
+globs: desktop/src/**/*.svelte,desktop/src/**/*.ts
+alwaysApply: false
+---
+
+# Desktop frontend (Svelte 5 + Tauri)
+
+- Svelte 5 runes only: `$state`, `$derived`, `$effect`, `$props`. No legacy
+  `export let` / reactive `$:` statements.
+- All backend calls go through `desktop/src/lib/api.ts` (thin `invoke` wrappers);
+  components never call `@tauri-apps/api` `invoke` directly.
+- Keep TS types in `desktop/src/lib/types.ts` mirroring the Rust structs used
+  for IPC. Update both sides together when the contract changes.
+- New Tauri commands must be registered in `desktop/src-tauri/src/lib.rs`
+  (`tauri::generate_handler!`); custom app commands don't need a capabilities
+  entry.
+- Run `npm run check` (svelte-check) after edits — it must report 0 errors.
+
+```ts
+// ✅ add a binding in lib/api.ts, then call it from components
+export const startRecording = () => invoke<void>("start_recording");
+```
