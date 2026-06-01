@@ -1,5 +1,20 @@
 # Installation
 
+## Packages
+
+Prebuilt artifacts are attached to every [GitHub Release](https://github.com/ChristopherTrimboli/linux-ai/releases)
+for both `x86_64` and `aarch64`.
+
+| Method | Command |
+| --- | --- |
+| **.deb** (Debian/Ubuntu) | `sudo apt install ./Linux.AI_*_amd64.deb` |
+| **.rpm** (Fedora/RHEL/openSUSE) | `sudo dnf install ./Linux.AI-*.x86_64.rpm` |
+| **AppImage** | `chmod +x Linux.AI_*.AppImage && ./Linux.AI_*.AppImage` |
+| **Snap** | `sudo snap install linux-ai` — see [Snap](./snap) |
+| **Flatpak** | build `dev.linux_ai.app` — see [Flatpak](./flatpak) |
+| **Arch (AUR)** | `yay -S linux-ai-bin` — see [AUR](./aur) |
+| **CLI via Cargo** | `cargo install linux-ai-cli` (installs `lai`) |
+
 ## Prerequisites
 
 - **Rust** stable 1.88 or newer (developed on 1.96). Install/upgrade with
@@ -35,8 +50,8 @@ sudo dnf install -y webkit2gtk4.1-devel openssl-devel curl wget file \
 
 ```bash
 # from the repo root
-cargo build --release -p linux-ai-cli      # builds ./target/release/ai
-cargo install --path crates/cli            # installs `ai` onto your PATH
+cargo build --release -p linux-ai-cli      # builds ./target/release/lai
+cargo install --path crates/cli            # installs `lai` onto your PATH
 ```
 
 ### Desktop app

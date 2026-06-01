@@ -1,6 +1,6 @@
 # linux-ai
 
-As an avid Ubuntu user I was horribly disgusted with the lack of support for Linux in the ChatGPT app, alternative open source projects suffer from feature bloat. So I told Claude to make the best Linux AI companion app for my own use. Enjoy if works for you too. :)
+As an avid Ubuntu user I was horribly disgusted with the lack of support for Linux in the ChatGPT app, alternative open source projects suffer from feature bloat. So I told Claude to make the best Linux AI app for my own use. Enjoy if works for you too. :)
 
 ## Core Philosophy
 
@@ -18,12 +18,12 @@ As an avid Ubuntu user I was horribly disgusted with the lack of support for Lin
 
 📖 **Documentation: <https://christophertrimboli.github.io/linux-ai/>**
 
-A Linux-first AI chat companion that can act on your computer through a small set of
+A Linux-first AI chat app that can act on your computer through a small set of
 built-in tools, available as both a desktop app and a CLI. Bring your own API key
 (Anthropic, OpenAI, or any OpenAI-compatible endpoint, including a local one).
 
 - **Desktop app** — Tauri 2 (Rust) + Svelte 5. Tiny, fast, native WebKitGTK.
-- **CLI (`ai`)** — one-shot prompts, stdin piping, and an interactive chat REPL.
+- **CLI (`lai`)** — one-shot prompts, stdin piping, and an interactive chat REPL.
 - **Shared Rust core (`la-core`)** — both front ends use the exact same engine:
   multi-provider streaming, tool execution, approval gating, and local history.
 
@@ -71,7 +71,7 @@ Other STT providers work too:
 linux-ai/
   crates/
     core/        # la-core: providers, tools, agent loop, SQLite store, config
-    cli/         # `ai` binary
+    cli/         # `lai` binary
   desktop/
     src/         # Svelte 5 + Vite frontend
     src-tauri/   # Tauri 2 Rust app (depends on la-core)
@@ -105,8 +105,8 @@ The CLI and core do **not** require any of the above — only a Rust toolchain.
 
 ```bash
 # from the repo root
-cargo build --release -p linux-ai-cli      # builds ./target/release/ai
-cargo install --path crates/cli            # installs `ai` onto your PATH
+cargo build --release -p linux-ai-cli      # builds ./target/release/lai
+cargo install --path crates/cli            # installs `lai` onto your PATH
 ```
 
 ### Desktop app
@@ -117,6 +117,15 @@ npm install
 npm run tauri dev        # dev build with hot reload
 npm run tauri build      # produces a .deb and an AppImage under src-tauri/target/release/bundle
 ```
+
+### Snap
+
+A [`snap/snapcraft.yaml`](snap/snapcraft.yaml) is included for building/distributing
+as a snap (strict confinement). Build it locally with `snapcraft`, or let the
+[Snap workflow](.github/workflows/snap.yml) build/publish it. Note that strict
+confinement sandboxes the computer-access tools to your home directory — for full
+system access prefer the `.deb`/AppImage. See the
+[Snap guide](https://christophertrimboli.github.io/linux-ai/guide/snap) for details.
 
 The desktop bundle targets (`deb`, `appimage`) and icons are configured in
 [desktop/src-tauri/tauri.conf.json](desktop/src-tauri/tauri.conf.json). Icons are
@@ -141,17 +150,17 @@ Restart the app (or log out/in) and the dock will show the real icon.
 ## Using the CLI
 
 ```bash
-ai "what is using port 8080?"        # one-shot prompt
-cat error.log | ai "explain this"     # pipe stdin into the prompt
-ai chat                               # interactive REPL (Ctrl-D / 'exit' to quit)
+lai "what is using port 8080?"       # one-shot prompt
+cat error.log | lai "explain this"    # pipe stdin into the prompt
+lai chat                              # interactive REPL (Ctrl-D / 'exit' to quit)
 
-ai providers                          # list providers and whether a key is set
-ai models openai                      # list known models for a provider
-ai auth anthropic                     # store an API key in the OS keyring
-ai config                             # show config + data file locations
+lai providers                         # list providers and whether a key is set
+lai models openai                     # list known models for a provider
+lai auth anthropic                    # store an API key in the OS keyring
+lai config                            # show config + data file locations
 
-ai -p openai -m gpt-4o "hello"        # override provider/model for one run
-ai -y "tidy up ~/Downloads"           # auto-approve tool actions for this run
+lai -p openai -m gpt-4o "hello"       # override provider/model for one run
+lai -y "tidy up ~/Downloads"          # auto-approve tool actions for this run
 ```
 
 ## Configuration & secrets
@@ -160,7 +169,7 @@ ai -y "tidy up ~/Downloads"           # auto-approve tool actions for this run
 - History: `~/.local/share/linux-ai/linux-ai.db` (SQLite).
 - API keys are resolved in this order: **OS keyring** → environment variable
   (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, ...) → plaintext
-  `api_key` in the config. Store keys with `ai auth <provider>` or via the desktop
+  `api_key` in the config. Store keys with `lai auth <provider>` or via the desktop
   Settings panel.
 
 Out of the box there are providers for **Anthropic**, **OpenAI**, **OpenRouter**

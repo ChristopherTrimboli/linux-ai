@@ -53,13 +53,13 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: tag,
-              name: `Linux AI Companion ${tag}`,
+              name: `Linux AI ${tag}`,
               body: [
                 `Automated release for ${tag}.`,
                 '',
                 'Assets:',
-                '- Desktop app: `.deb` and `.AppImage` (x86_64 and aarch64)',
-                '- CLI: `ai-*-linux-gnu.tar.gz` (x86_64 and aarch64)',
+                '- Desktop app: `.deb`, `.rpm`, and `.AppImage` (x86_64 and aarch64)',
+                '- CLI: `lai-*-linux-gnu.tar.gz` (x86_64 and aarch64)',
               ].join('\n'),
               draft: true,
               prerelease: false,
@@ -132,9 +132,9 @@ jobs:
         id: cli
         run: |
           mkdir -p dist-cli stage
-          cp target/release/ai README.md LICENSE stage/
-          asset="ai-${{ needs.create-release.outputs.tag }}-${{ matrix.arch }}-unknown-linux-gnu.tar.gz"
-          tar -C stage -czf "dist-cli/${asset}" ai README.md LICENSE
+          cp target/release/lai README.md LICENSE stage/
+          asset="lai-${{ needs.create-release.outputs.tag }}-${{ matrix.arch }}-unknown-linux-gnu.tar.gz"
+          tar -C stage -czf "dist-cli/${asset}" lai README.md LICENSE
           (cd dist-cli && sha256sum "${asset}" > "${asset}.sha256")
           echo "asset=${asset}" >> "$GITHUB_OUTPUT"
 

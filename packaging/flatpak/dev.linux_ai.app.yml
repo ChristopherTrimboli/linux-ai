@@ -1,0 +1,58 @@
+# Flatpak manifest for Linux AI.
+#
+# Flatpak application IDs may not contain hyphens, so the id is the
+# underscore-normalized form of the Tauri identifier `dev.linux-ai.app`.
+#
+# This repacks the Tauri `.deb` rather than compiling from source, which keeps
+# the build fast and offline-friendly for self-distribution. Build the deb first
+# (`cd desktop && npm run tauri build -- --bundles deb`) and copy/symlink it next
+# to this manifest as `linux-ai.deb`, then:
+#
+#   flatpak install -y flathub org.gnome.Platform//47 org.gnome.Sdk//47
+#   flatpak-builder --user --install --force-clean build-dir dev.linux_ai.app.yml
+#   flatpak run dev.linux_ai.app
+app-id: dev.linux_ai.app
+runtime: org.gnome.Platform
+runtime-version: "47"
+sdk: org.gnome.Sdk
+command: linux-ai-desktop
+
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --device=dri
+  # Voice input records from the microphone.
+  - --device=all
+  # The built-in computer-access tools (run_shell, read/write file, search) need
+  # to see the real filesystem; drop this to sandbox the app to its own data.
+  - --filesystem=host
+  # API keys are stored in the OS keyring via the Secret Service.
+  - --talk-name=org.freedesktop.secrets
+
+modules:
+  - name: linux-ai
+    buildsystem: simple
+    build-commands:
+      - ar x linux-ai.deb
+      - mkdir -p payload && tar -xf data.tar.* -C payload
+      - cp -a payload/usr/bin/. /app/bin/
+      - mkdir -p /app/share && cp -a payload/usr/share/. /app/share/
+      - |
+        set -e
+        # Rename the desktop entry + icons to the Flatpak app id.
+        desk=$(ls /app/share/applications/*.desktop | head -n1)
+        install -Dm644 "$desk" "/app/share/applications/${FLATPAK_ID}.desktop"
+        rm -f "$desk"
+        sed -i \
+          -e "s|^Exec=.*|Exec=linux-ai-desktop|" \
+          -e "s|^Icon=.*|Icon=${FLATPAK_ID}|" \
+          "/app/share/applications/${FLATPAK_ID}.desktop"
+        for png in $(find /app/share/icons -name '*.png'); do
+          mv "$png" "$(dirname "$png")/${FLATPAK_ID}.png"
+        done
+    sources:
+      - type: file
+        path: linux-ai.deb

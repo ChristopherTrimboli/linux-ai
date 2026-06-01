@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
-description = "Desktop app for the Linux AI Companion."
+description = "Desktop app for Linux AI."
 
 [lib]
 name = "linux_ai_desktop_lib"

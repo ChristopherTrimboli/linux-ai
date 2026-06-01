@@ -1,0 +1,60 @@
+name: Publish crates
+
+# Publish `la-core` and the `linux-ai-cli` (the `lai` binary) to crates.io when a
+# version tag is pushed. Requires the repo secret CARGO_REGISTRY_TOKEN
+# (Settings -> Secrets -> Actions), created from a crates.io API token.
+#
+# The crate names `la-core` and `linux-ai-cli` must be available/owned on
+# crates.io for this to succeed.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (e.g. v0.1.0)"
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve and validate version tag
+        id: tag
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Tag '$tag' is not a valid version tag (expected vX.Y.Z)"
+            exit 1
+          fi
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp version from tag
+        run: |
+          version="${{ steps.tag.outputs.version }}"
+          # Workspace package version (drives all crates) ...
+          sed -i -E "0,/^version = \".*\"/s//version = \"${version}\"/" Cargo.toml
+          # ... and the la-core dependency version the CLI publishes against.
+          sed -i -E "s|(la-core = \{ path = \"crates/core\", version = )\"[^\"]*\"|\1\"${version}\"|" Cargo.toml
+          echo "Publishing version ${version}"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish la-core
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p la-core --allow-dirty
+
+      - name: Wait for crates.io to index la-core
+        run: sleep 30
+
+      - name: Publish linux-ai-cli
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p linux-ai-cli --allow-dirty

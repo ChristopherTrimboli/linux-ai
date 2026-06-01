@@ -4,8 +4,11 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
 authors.workspace = true
-description = "Shared core for the Linux AI Companion: providers, tools, agent loop, persistence."
+description = "Shared core for Linux AI: providers, tools, agent loop, persistence."
+keywords = ["ai", "llm", "assistant", "agent", "linux"]
+categories = ["api-bindings", "asynchronous"]
 
 [dependencies]
 tokio = { workspace = true }

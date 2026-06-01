@@ -14,7 +14,7 @@ use crate::tools::{
     auto_approver, ApprovalDecision, ApprovalRequest, Approver, Risk, ToolContext, ToolRegistry,
 };
 
-pub const DEFAULT_SYSTEM: &str = "You are Linux AI Companion, a helpful assistant embedded in the user's Linux desktop. \
+pub const DEFAULT_SYSTEM: &str = "You are Linux AI, a helpful assistant embedded in the user's Linux desktop. \
 You can inspect and act on the user's computer through the provided tools (reading and writing files, \
 listing directories, searching, querying system info, running shell commands, and opening files/URLs). \
 Prefer the dedicated file tools over shell when possible. Be concise. Explain what you are about to do \

@@ -260,7 +260,7 @@
     {#if !activeId && messages.length === 0}
       <div class="empty">
         <div>
-          <div class="big">Linux AI Companion</div>
+          <div class="big">Linux AI</div>
           <div>Ask anything, or let it act on your computer with your approval.</div>
         </div>
       </div>

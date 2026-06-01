@@ -1,0 +1,53 @@
+name: Snap
+
+# Build the snap with snapcraft (LXD) and upload it as a workflow artifact.
+# If a store credential secret is configured, also publish: pushes to `main`
+# go to the `edge` channel, version tags go to `stable`.
+#
+# To enable publishing, create a store login and save it as the repo secret
+# SNAPCRAFT_STORE_CREDENTIALS:
+#   snapcraft export-login --snaps linux-ai \
+#     --acls package_access,package_push,package_update,package_release -
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - "desktop/**"
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "snap/snapcraft.yaml"
+      - ".github/workflows/snap.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      STORE_CREDS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build snap
+        id: snapcraft
+        uses: snapcore/action-build@v1
+
+      - name: Upload snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snap
+          path: ${{ steps.snapcraft.outputs.snap }}
+
+      - name: Publish to the Snap Store
+        if: env.STORE_CREDS != ''
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.snapcraft.outputs.snap }}
+          release: ${{ startsWith(github.ref, 'refs/tags/') && 'stable' || 'edge' }}

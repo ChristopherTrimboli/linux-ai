@@ -4,11 +4,14 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
 authors.workspace = true
-description = "CLI for the Linux AI Companion."
+description = "Command line for Linux AI."
+keywords = ["ai", "llm", "cli", "assistant", "linux"]
+categories = ["command-line-utilities"]
 
 [[bin]]
-name = "ai"
+name = "lai"
 path = "src/main.rs"
 
 [dependencies]

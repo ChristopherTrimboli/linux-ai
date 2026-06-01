@@ -1,11 +1,11 @@
 # What it is
 
-A Linux-first AI chat companion that can act on your computer through a small set
+A Linux-first AI chat app that can act on your computer through a small set
 of built-in tools, available as both a desktop app and a CLI. Bring your own API
 key (Anthropic, OpenAI, or any OpenAI-compatible endpoint, including a local one).
 
 - **Desktop app** — Tauri 2 (Rust) + Svelte 5. Tiny, fast, native WebKitGTK.
-- **CLI (`ai`)** — one-shot prompts, stdin piping, and an interactive chat REPL.
+- **CLI (`lai`)** — one-shot prompts, stdin piping, and an interactive chat REPL.
 - **Shared Rust core (`la-core`)** — both front ends use the exact same engine:
   multi-provider streaming, tool execution, approval gating, and local history.
 
@@ -41,7 +41,7 @@ by default) and shell commands are screened against a deny-list.
 linux-ai/
   crates/
     core/        # la-core: providers, tools, agent loop, SQLite store, config
-    cli/         # `ai` binary
+    cli/         # `lai` binary
   desktop/
     src/         # Svelte 5 + Vite frontend
     src-tauri/   # Tauri 2 Rust app (depends on la-core)

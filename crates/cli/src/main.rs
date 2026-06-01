@@ -1,11 +1,11 @@
-//! `ai` — the Linux AI Companion command line.
+//! `lai` — the Linux AI command line.
 //!
 //! Usage:
-//!   ai "what is using port 8080?"      one-shot prompt
-//!   cat file | ai "summarize this"      pipe stdin into the prompt
-//!   ai chat                             interactive REPL
-//!   ai providers | ai models            inspect configuration
-//!   ai auth <provider>                  store an API key in the OS keyring
+//!   lai "what is using port 8080?"     one-shot prompt
+//!   cat file | lai "summarize this"     pipe stdin into the prompt
+//!   lai chat                            interactive REPL
+//!   lai providers | lai models          inspect configuration
+//!   lai auth <provider>                 store an API key in the OS keyring
 
 use std::io::{IsTerminal, Read, Write};
 use std::sync::Arc;
@@ -16,7 +16,7 @@ use la_core::{Agent, AgentEvent, Config, Store};
 use tokio::sync::mpsc;
 
 #[derive(Parser)]
-#[command(name = "ai", version, about = "AI companion for your Linux desktop")]
+#[command(name = "lai", version, about = "Linux AI — AI for your Linux desktop")]
 struct Cli {
     /// Provider to use (overrides config default).
     #[arg(short, long, global = true)]
@@ -256,7 +256,7 @@ async fn chat_repl(
     let convo = store.create_conversation("chat")?;
 
     println!(
-        "Linux AI Companion — provider: {}, model: {}",
+        "Linux AI — provider: {}, model: {}",
         provider.unwrap_or(&config.default_provider),
         model.unwrap_or(&config.default_model),
     );

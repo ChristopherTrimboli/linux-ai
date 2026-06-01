@@ -4,9 +4,9 @@ const repo = "https://github.com/ChristopherTrimboli/linux-ai";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "Linux AI Companion",
+  title: "Linux AI",
   description:
-    "A Linux-first AI chat companion with tool-based access to your computer and a matching CLI. Free and open source.",
+    "A Linux-first AI chat app with tool-based access to your computer and a matching CLI. Free and open source.",
   // Project site served from https://<user>.github.io/linux-ai/
   base: "/linux-ai/",
   lastUpdated: true,
@@ -36,12 +36,19 @@ export default defineConfig({
           { text: "Security model", link: "/guide/security" },
         ],
       },
+    {
+      text: "Distribution",
+      items: [
+        { text: "Install packages", link: "/guide/installation" },
+        { text: "Snap package", link: "/guide/snap" },
+        { text: "Flatpak", link: "/guide/flatpak" },
+        { text: "Arch (AUR)", link: "/guide/aur" },
+        { text: "Releases & versioning", link: "/guide/releases" },
+      ],
+    },
       {
         text: "Project",
-        items: [
-          { text: "Releases & versioning", link: "/guide/releases" },
-          { text: "Contributing", link: "/guide/contributing" },
-        ],
+        items: [{ text: "Contributing", link: "/guide/contributing" }],
       },
     ],
     socialLinks: [{ icon: "github", link: repo }],
@@ -52,7 +59,7 @@ export default defineConfig({
     },
     footer: {
       message: "Released under the MIT License.",
-      copyright: `Copyright © ${new Date().getFullYear()} Linux AI Companion contributors`,
+      copyright: `Copyright © ${new Date().getFullYear()} Linux AI contributors`,
     },
   },
 });

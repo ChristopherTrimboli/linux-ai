@@ -2,7 +2,7 @@
 
 Pushing a version tag builds and publishes a GitHub Release with production
 artifacts for both **x86_64** and **aarch64** Linux (CLI tarball + `.deb` +
-AppImage per arch):
+`.rpm` + AppImage per arch):
 
 ```bash
 git tag v0.1.0
@@ -11,6 +11,17 @@ git push origin v0.1.0
 
 You can also trigger the workflow manually from the Actions tab (provide the tag
 as input).
+
+The same tag triggers two more workflows: the [Snap](./snap) build/publish and a
+**crates.io** publish of `la-core` and `linux-ai-cli`.
+
+## Publishing to crates.io
+
+The [`Publish crates` workflow](https://github.com/ChristopherTrimboli/linux-ai/blob/main/.github/workflows/publish-crates.yml)
+publishes `la-core` then `linux-ai-cli` (the `lai` binary) on every version tag.
+It needs the repo secret `CARGO_REGISTRY_TOKEN` (a crates.io API token), and the
+crate names must be available/owned on crates.io. Once published, anyone can
+install the CLI with `cargo install linux-ai-cli`.
 
 ## Versioning
 

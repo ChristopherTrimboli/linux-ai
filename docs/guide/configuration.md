@@ -12,7 +12,7 @@ Keys are resolved in this order:
    `OPENROUTER_API_KEY`, …)
 3. **Plaintext `api_key`** in the config file (lowest precedence)
 
-Store keys with `ai auth <provider>` or via the desktop **Settings** panel. On
+Store keys with `lai auth <provider>` or via the desktop **Settings** panel. On
 headless systems without a secret service, the keyring step is skipped and the
 env/config fallback is used.
 

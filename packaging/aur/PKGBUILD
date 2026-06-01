@@ -1,0 +1,43 @@
+# Maintainer: Christopher Trimboli <https://github.com/ChristopherTrimboli>
+#
+# Binary AUR package for Linux AI. It repacks the official `.deb` published with
+# each GitHub release, so there is no compilation step. Bump `pkgver` and run
+# `makepkg --printsrcinfo > .SRCINFO` to release a new version.
+
+pkgname=linux-ai-bin
+_appname="Linux AI"
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="A Linux-first AI chat app with tool-based computer access (desktop app + lai CLI)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/ChristopherTrimboli/linux-ai"
+license=('MIT')
+provides=('linux-ai')
+conflicts=('linux-ai')
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'librsvg' 'alsa-lib')
+options=('!strip')
+
+# The Tauri .deb is named "Linux AI_<version>_<debarch>.deb". The `::` renames
+# the download to a clean local filename and %20 escapes the space in the URL.
+_debbase="https://github.com/ChristopherTrimboli/linux-ai/releases/download/v${pkgver}"
+source_x86_64=("${pkgname}-${pkgver}-amd64.deb::${_debbase}/Linux%20AI_${pkgver}_amd64.deb")
+source_aarch64=("${pkgname}-${pkgver}-arm64.deb::${_debbase}/Linux%20AI_${pkgver}_arm64.deb")
+sha256sums_x86_64=('SKIP')
+sha256sums_aarch64=('SKIP')
+
+package() {
+  local deb
+  deb=$(ls "${srcdir}"/${pkgname}-${pkgver}-*.deb | head -n1)
+
+  # Unpack the .deb (debian-binary + control.tar + data.tar) and extract the
+  # data payload, which is already a /usr tree, straight into $pkgdir.
+  bsdtar -xf "${deb}" -C "${srcdir}"
+  bsdtar -xf "${srcdir}"/data.tar.* -C "${pkgdir}"
+
+  # Ship the license where Arch expects it.
+  install -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  if [ -f "${pkgdir}/usr/share/doc/linux-ai/LICENSE" ]; then
+    install -m644 "${pkgdir}/usr/share/doc/linux-ai/LICENSE" \
+      "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  fi
+}

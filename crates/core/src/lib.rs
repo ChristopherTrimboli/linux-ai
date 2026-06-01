@@ -1,4 +1,4 @@
-//! `la-core`: the shared engine behind the Linux AI Companion desktop app and
+//! `la-core`: the shared engine behind the Linux AI desktop app and
 //! CLI. It provides a multi-provider LLM abstraction, a built-in tool system
 //! with risk-based approval, an agent loop, and local SQLite persistence.
 

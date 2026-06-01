@@ -1,0 +1,98 @@
+name: linux-ai
+base: core24
+adopt-info: build-app
+summary: AI for your Linux desktop
+description: |
+  A Linux-first AI chat app with tool-based access to your computer and a
+  matching CLI. Bring your own API key (Anthropic, OpenAI, OpenRouter, or any
+  OpenAI-compatible / local endpoint).
+
+  Note: under strict snap confinement the built-in "computer access" tools
+  (run_shell, read/write file, search) are limited to your home directory and
+  connected interfaces. For unrestricted access, install the .deb / AppImage from
+  the GitHub releases instead.
+grade: stable
+confinement: strict
+license: MIT
+
+layout:
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/webkit2gtk-4.1:
+    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/webkit2gtk-4.1
+
+apps:
+  linux-ai:
+    command: usr/bin/linux-ai
+    desktop: usr/share/applications/linux-ai.desktop
+    extensions: [gnome]
+    environment:
+      # WebKitGTK can render a blank window under confinement without this.
+      WEBKIT_DISABLE_DMABUF_RENDERER: 1
+    plugs:
+      - network
+      - network-bind
+      - home
+      - removable-media
+      - audio-record
+      - audio-playback
+      - opengl
+      - browser-support
+
+parts:
+  build-app:
+    plugin: dump
+    source: .
+    build-snaps:
+      - node/22/stable
+      - rustup/latest/stable
+    build-packages:
+      - libwebkit2gtk-4.1-dev
+      - build-essential
+      - curl
+      - wget
+      - file
+      - libxdo-dev
+      - libssl-dev
+      - libasound2-dev
+      - libayatana-appindicator3-dev
+      - librsvg2-dev
+      - dpkg
+    stage-packages:
+      - libwebkit2gtk-4.1-0
+      - libayatana-appindicator3-1
+      - libasound2t64
+    override-build: |
+      set -eu
+
+      # Version comes from the workspace Cargo.toml ([workspace.package] version),
+      # which the release pipeline stamps from the git tag.
+      version="$(grep -m1 '^version' Cargo.toml | sed -E 's/.*"(.*)".*/\1/')"
+      craftctl set version="$version"
+
+      rustup default stable
+
+      cd desktop
+      npm ci
+      npm run tauri build -- --bundles deb
+
+      deb="$(ls src-tauri/target/release/bundle/deb/*.deb | head -n1)"
+      dpkg -x "$deb" "$CRAFT_PART_INSTALL"
+
+      # Normalize the binary, desktop entry and icon to a stable snap name so the
+      # `command:` / `desktop:` keys above always resolve regardless of how Tauri
+      # named them inside the .deb.
+      bin="$(ls "$CRAFT_PART_INSTALL"/usr/bin/ | head -n1)"
+      if [ "$bin" != "linux-ai" ]; then
+        mv "$CRAFT_PART_INSTALL/usr/bin/$bin" "$CRAFT_PART_INSTALL/usr/bin/linux-ai"
+      fi
+
+      dfile="$(ls "$CRAFT_PART_INSTALL"/usr/share/applications/*.desktop | head -n1)"
+      mv "$dfile" "$CRAFT_PART_INSTALL/usr/share/applications/linux-ai.desktop"
+      sed -i \
+        -e 's|^Exec=.*|Exec=linux-ai|' \
+        -e 's|^Icon=.*|Icon=/usr/share/icons/hicolor/128x128/apps/linux-ai.png|' \
+        "$CRAFT_PART_INSTALL/usr/share/applications/linux-ai.desktop"
+
+      icon="$(ls "$CRAFT_PART_INSTALL"/usr/share/icons/hicolor/128x128/apps/*.png 2>/dev/null | head -n1 || true)"
+      if [ -n "${icon:-}" ] && [ "$(basename "$icon")" != "linux-ai.png" ]; then
+        cp "$icon" "$CRAFT_PART_INSTALL/usr/share/icons/hicolor/128x128/apps/linux-ai.png"
+      fi

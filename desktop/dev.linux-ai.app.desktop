@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
 Version=1.0
-Name=Linux AI Companion
-GenericName=AI Companion
-Comment=AI chat companion with tool-based access to your computer
+Name=Linux AI
+GenericName=AI Assistant
+Comment=AI chat app with tool-based access to your computer
 Exec=linux-ai-desktop
 Icon=dev.linux-ai.app
 Terminal=false

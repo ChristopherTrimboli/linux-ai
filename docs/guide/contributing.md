@@ -18,7 +18,7 @@ cd desktop && npm install && npm run tauri dev
 
 - `crates/core` — the shared engine (`la-core`): providers, tools, agent loop,
   SQLite store, config.
-- `crates/cli` — the `ai` command line.
+- `crates/cli` — the `lai` command line.
 - `desktop` — the Tauri 2 + Svelte 5 desktop app.
 - `docs` — this VitePress site.
 

@@ -10,11 +10,15 @@ default-members = ["crates/core", "crates/cli"]
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/cjft/linux-ai"
+repository = "https://github.com/ChristopherTrimboli/linux-ai"
+homepage = "https://christophertrimboli.github.io/linux-ai/"
 authors = ["linux-ai contributors"]
 
 [workspace.dependencies]
-la-core = { path = "crates/core" }
+# `version` is required so the CLI is publishable to crates.io (cargo uses the
+# path locally and the version when publishing). The publish workflow stamps
+# both this and [workspace.package] version from the git tag.
+la-core = { path = "crates/core", version = "0.1.0" }
 
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"

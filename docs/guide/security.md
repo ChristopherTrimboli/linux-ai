@@ -15,7 +15,7 @@ When the model requests a mutating tool, you decide:
 - **Desktop:** an inline approval card with **Approve** / **Deny**.
 - **CLI:** a `[y/N]` prompt.
 
-Set `tools.auto_approve = true` (or pass `ai -y`) to skip prompts for a trusted
+Set `tools.auto_approve = true` (or pass `lai -y`) to skip prompts for a trusted
 session. Read-only tools (`system_info`, `read_file`, `list_dir`, `search_files`)
 always run without prompting.
 

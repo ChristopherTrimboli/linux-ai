@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate app icons for the Linux AI Companion.
+"""Generate app icons for Linux AI.
 
 Draws a rounded dark tile with a teal->green gradient prompt glyph (">_") and a
 small spark, then exports the PNG sizes Tauri references plus an .ico.

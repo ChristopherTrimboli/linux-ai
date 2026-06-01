@@ -2,12 +2,12 @@
 layout: home
 
 hero:
-  name: Linux AI Companion
+  name: Linux AI
   text: AI that lives on your Linux desktop
-  tagline: A Linux-first AI chat companion with tool-based access to your computer — desktop app and CLI. Free and open source.
+  tagline: A Linux-first AI chat app with tool-based access to your computer — desktop app and CLI. Free and open source.
   image:
     src: /favicon.png
-    alt: Linux AI Companion
+    alt: Linux AI
   actions:
     - theme: brand
       text: Get started
@@ -34,7 +34,7 @@ features:
     details: Anthropic, OpenAI, OpenRouter, or any OpenAI-compatible / local endpoint (Ollama, LM Studio, …).
   - icon: 💻
     title: Desktop + CLI
-    details: A Tauri 2 / Svelte 5 desktop app and an `ai` command line, sharing one Rust core.
+    details: A Tauri 2 / Svelte 5 desktop app and a `lai` command line, sharing one Rust core.
   - icon: 🔒
     title: Local & private
     details: Conversations in local SQLite, API keys in your OS keyring. Only the provider you pick is ever contacted.
