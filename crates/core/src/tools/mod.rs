@@ -29,6 +29,7 @@ pub enum Risk {
 pub struct ToolContext {
     pub file_roots: Vec<PathBuf>,
     pub shell_deny: Vec<String>,
+    pub shell_timeout_secs: u64,
 }
 
 impl ToolContext {
@@ -40,6 +41,7 @@ impl ToolContext {
                 .map(|p| p.canonicalize().unwrap_or_else(|_| p.clone()))
                 .collect(),
             shell_deny: cfg.tools.shell_deny.clone(),
+            shell_timeout_secs: cfg.tools.shell_timeout_secs,
         }
     }
 

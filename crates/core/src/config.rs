@@ -53,6 +53,10 @@ pub struct ToolPolicy {
     /// Substrings that, if present in a shell command, cause an automatic deny.
     #[serde(default = "default_shell_deny")]
     pub shell_deny: Vec<String>,
+    /// Max seconds a `run_shell` command may run before it is killed. Guards
+    /// against commands that block forever (e.g. waiting on interactive input).
+    #[serde(default = "default_shell_timeout_secs")]
+    pub shell_timeout_secs: u64,
 }
 
 fn default_shell_deny() -> Vec<String> {
@@ -65,12 +69,17 @@ fn default_shell_deny() -> Vec<String> {
     ]
 }
 
+fn default_shell_timeout_secs() -> u64 {
+    120
+}
+
 impl Default for ToolPolicy {
     fn default() -> Self {
         ToolPolicy {
             auto_approve: false,
             file_roots: Vec::new(),
             shell_deny: default_shell_deny(),
+            shell_timeout_secs: default_shell_timeout_secs(),
         }
     }
 }

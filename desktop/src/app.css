@@ -448,6 +448,16 @@ select optgroup {
   display: inline-block;
   animation: spin 0.9s linear infinite;
 }
+.composer button.stop {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+  font-weight: 600;
+}
+.composer button.stop:hover:not(:disabled) {
+  filter: brightness(1.07);
+  background: var(--danger);
+}
 @keyframes mic-pulse {
   0%,
   100% {

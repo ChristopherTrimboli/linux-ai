@@ -13,6 +13,9 @@ pub mod tools;
 pub mod transcribe;
 
 pub use agent::{Agent, AgentEvent, DEFAULT_SYSTEM};
+/// Re-exported so embedders can cancel an in-flight turn without depending on
+/// `tokio-util` directly.
+pub use tokio_util::sync::CancellationToken;
 pub use config::{Config, ProviderConfig, ProviderKind, SttConfig, ToolPolicy};
 pub use transcribe::transcribe;
 pub use error::{Error, Result};

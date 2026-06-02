@@ -25,6 +25,8 @@ export const setApiKey = (provider: string, key: string) =>
 export const respondApproval = (id: string, approved: boolean) =>
   invoke<void>("respond_approval", { id, approved });
 
+export const stopGeneration = () => invoke<void>("stop_generation");
+
 export const startRecording = () => invoke<void>("start_recording");
 
 export const stopRecording = () => invoke<string>("stop_recording");

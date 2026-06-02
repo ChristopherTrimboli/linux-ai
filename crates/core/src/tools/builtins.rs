@@ -1,6 +1,9 @@
 //! Built-in v1 tools. Inputs are validated against `ToolContext` (filesystem
 //! roots, shell deny-list) before any side effects occur.
 
+use std::process::Stdio;
+use std::time::Duration;
+
 use async_trait::async_trait;
 use serde_json::{json, Value};
 
@@ -10,6 +13,39 @@ use super::{Risk, Tool, ToolContext};
 
 const MAX_READ_BYTES: usize = 256 * 1024;
 const MAX_OUTPUT_BYTES: usize = 64 * 1024;
+
+/// Rewrite standalone `sudo` tokens to `sudo -n` (non-interactive). The tool has
+/// no terminal to type a password into, so an interactive `sudo` would block
+/// forever; `-n` makes it fail fast with "a password is required" instead.
+fn force_noninteractive_sudo(command: &str) -> String {
+    let mut result = String::with_capacity(command.len() + 4);
+    let mut last = 0;
+    for (idx, _) in command.match_indices("sudo") {
+        let before_ok = idx == 0
+            || command[..idx]
+                .chars()
+                .next_back()
+                .map(|c| c.is_whitespace() || matches!(c, '|' | '&' | ';' | '('))
+                .unwrap_or(false);
+        let after = &command[idx + 4..];
+        let after_ok = after
+            .chars()
+            .next()
+            .map(|c| c.is_whitespace())
+            .unwrap_or(false);
+        if before_ok && after_ok {
+            let rest = after.trim_start();
+            result.push_str(&command[last..idx + 4]);
+            if !(rest == "-n" || rest.starts_with("-n ") || rest.starts_with("--non-interactive"))
+            {
+                result.push_str(" -n");
+            }
+            last = idx + 4;
+        }
+    }
+    result.push_str(&command[last..]);
+    result
+}
 
 fn str_arg(input: &Value, key: &str) -> Result<String> {
     input
@@ -329,7 +365,7 @@ impl Tool for RunShell {
         "run_shell"
     }
     fn description(&self) -> &str {
-        "Run a shell command via `sh -c` and return combined stdout/stderr and the exit code. Use for system tasks; prefer dedicated tools for file reads/writes."
+        "Run a shell command via `sh -c` and return combined stdout/stderr and the exit code. Use for system tasks; prefer dedicated tools for file reads/writes. Runs non-interactively with no terminal: commands cannot prompt for input. `sudo` is forced to `-n` (non-interactive) and will fail if a password is required — in that case tell the user to run the command themselves in a terminal. Long-running commands are killed after a timeout."
     }
     fn input_schema(&self) -> Value {
         json!({
@@ -360,13 +396,35 @@ impl Tool for RunShell {
                 )));
             }
         }
+
+        let to_run = force_noninteractive_sudo(&command);
         let mut cmd = tokio::process::Command::new("sh");
-        cmd.arg("-c").arg(&command);
+        cmd.arg("-c")
+            .arg(&to_run)
+            // No interactive input: close stdin so anything that reads it gets
+            // EOF instead of blocking, and kill the child if we drop on timeout.
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true);
         if let Some(cwd) = input.get("cwd").and_then(|v| v.as_str()) {
             let dir = ctx.resolve_in_roots(cwd, true)?;
             cmd.current_dir(dir);
         }
-        let output = cmd.output().await?;
+
+        let timeout = Duration::from_secs(ctx.shell_timeout_secs.max(1));
+        let output = match tokio::time::timeout(timeout, cmd.output()).await {
+            Ok(result) => result?,
+            Err(_) => {
+                return Ok(format!(
+                    "exit code: -1\n[error] command exceeded the {}s timeout and was terminated. \
+It may have been waiting for interactive input (this tool has no terminal). If it \
+needs a password or a prompt, ask the user to run it themselves in a terminal.",
+                    ctx.shell_timeout_secs
+                ));
+            }
+        };
+
         let mut combined = String::new();
         combined.push_str(&String::from_utf8_lossy(&output.stdout));
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -374,11 +432,48 @@ impl Tool for RunShell {
             combined.push_str("\n[stderr]\n");
             combined.push_str(&stderr);
         }
+
+        // Surface a clear hint when sudo refused for lack of a password, so the
+        // model stops retrying and tells the user instead.
         let code = output.status.code().unwrap_or(-1);
+        if code != 0
+            && (stderr.contains("a password is required")
+                || stderr.contains("a terminal is required")
+                || stderr.contains("no tty present"))
+        {
+            combined.push_str(
+                "\n[hint] This command needs elevated (sudo) privileges and cannot be \
+run non-interactively here. Ask the user to run it in a terminal.",
+            );
+        }
+
         Ok(truncate(
             format!("exit code: {code}\n{combined}"),
             MAX_OUTPUT_BYTES,
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::force_noninteractive_sudo;
+
+    #[test]
+    fn rewrites_sudo_to_noninteractive() {
+        assert_eq!(force_noninteractive_sudo("sudo apt update"), "sudo -n apt update");
+        assert_eq!(
+            force_noninteractive_sudo("echo hi | sudo tee /etc/x"),
+            "echo hi | sudo -n tee /etc/x"
+        );
+    }
+
+    #[test]
+    fn leaves_other_commands_alone() {
+        assert_eq!(force_noninteractive_sudo("ls -la"), "ls -la");
+        assert_eq!(force_noninteractive_sudo("pseudo cmd"), "pseudo cmd");
+        assert_eq!(force_noninteractive_sudo("sudoers"), "sudoers");
+        // Already non-interactive: don't double up.
+        assert_eq!(force_noninteractive_sudo("sudo -n apt update"), "sudo -n apt update");
     }
 }
 

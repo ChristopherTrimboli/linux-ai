@@ -8,7 +8,7 @@ use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
 use la_core::tools::{ApprovalDecision, ApprovalRequest, Approver};
-use la_core::{Agent, AgentEvent, Config, Conversation, Message, Store};
+use la_core::{Agent, AgentEvent, CancellationToken, Config, Conversation, Message, Store};
 use serde::Serialize;
 use tauri::ipc::Channel;
 use tauri::State;
@@ -23,6 +23,8 @@ pub struct AppState {
     config: Mutex<Config>,
     pending: PendingMap,
     recorder: Mutex<Option<RecordingHandle>>,
+    /// Cancellation handle for the in-flight turn, if any.
+    cancel: Mutex<Option<CancellationToken>>,
 }
 
 #[derive(Serialize)]
@@ -151,6 +153,19 @@ fn respond_approval(state: State<'_, AppState>, id: String, approved: bool) {
     }
 }
 
+/// Cancel the in-flight turn. Stops streaming cleanly and resolves any pending
+/// approval prompts as denied so the agent loop can unwind.
+#[tauri::command]
+fn stop_generation(state: State<'_, AppState>) {
+    if let Some(token) = state.cancel.lock().unwrap().take() {
+        token.cancel();
+    }
+    let pending: Vec<_> = state.pending.lock().unwrap().drain().collect();
+    for (_, sender) in pending {
+        let _ = sender.send(false);
+    }
+}
+
 fn desktop_approver(pending: PendingMap, tx: mpsc::UnboundedSender<AgentEvent>) -> Approver {
     Arc::new(move |req: ApprovalRequest| {
         let pending = pending.clone();
@@ -194,9 +209,15 @@ async fn send_message(
     let (tx, mut rx) = mpsc::unbounded_channel::<AgentEvent>();
     let approver = desktop_approver(pending, tx.clone());
 
+    // Register a fresh cancellation token so `stop_generation` can interrupt.
+    let cancel = CancellationToken::new();
+    *state.cancel.lock().unwrap() = Some(cancel.clone());
+
     let agent2 = agent.clone();
     tokio::spawn(async move {
-        let _ = agent2.run_turn(&conversation_id, &text, approver, tx).await;
+        let _ = agent2
+            .run_turn(&conversation_id, &text, approver, tx, cancel)
+            .await;
     });
 
     while let Some(event) = rx.recv().await {
@@ -204,6 +225,9 @@ async fn send_message(
             break;
         }
     }
+
+    // Turn finished (or was cancelled); clear the token.
+    *state.cancel.lock().unwrap() = None;
     Ok(())
 }
 
@@ -218,6 +242,7 @@ pub fn run() {
             config: Mutex::new(config),
             pending: Arc::new(Mutex::new(HashMap::new())),
             recorder: Mutex::new(None),
+            cancel: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             list_conversations,
@@ -233,6 +258,7 @@ pub fn run() {
             stop_recording,
             cancel_recording,
             respond_approval,
+            stop_generation,
             send_message,
         ])
         .run(tauri::generate_context!())

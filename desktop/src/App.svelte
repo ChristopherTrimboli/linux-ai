@@ -27,6 +27,7 @@
 
   let input = $state("");
   let sending = $state(false);
+  let stopping = $state(false);
   let errorMsg = $state("");
 
   let recording = $state(false);
@@ -182,7 +183,19 @@
     liveTools = [];
     approvals = [];
     sending = false;
+    stopping = false;
     await refreshConversations();
+  }
+
+  async function stop() {
+    if (!sending || stopping) return;
+    stopping = true;
+    try {
+      await api.stopGeneration();
+    } catch (e) {
+      errorMsg = String(e);
+    }
+    // `send()` resolves once the backend unwinds and handles the rest of cleanup.
   }
 
   function onKey(e: KeyboardEvent) {
@@ -347,9 +360,19 @@
           bind:this={composerEl}
           onkeydown={onKey}
         ></textarea>
-        <button class="primary" onclick={send} disabled={sending || !input.trim()}>
-          {sending ? "…" : "Send"}
-        </button>
+        {#if sending}
+          <button
+            class="stop"
+            onclick={stop}
+            disabled={stopping}
+            title="Stop generating"
+            aria-label="Stop generating"
+          >
+            ■ {stopping ? "Stopping…" : "Stop"}
+          </button>
+        {:else}
+          <button class="primary" onclick={send} disabled={!input.trim()}>Send</button>
+        {/if}
       </div>
     </div>
   </main>

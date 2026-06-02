@@ -3,6 +3,7 @@
 //! back to the model, and repeats until the model stops calling tools.
 
 use tokio::sync::mpsc::UnboundedSender;
+use tokio_util::sync::CancellationToken;
 
 use crate::config::Config;
 use crate::error::Result;
@@ -18,7 +19,10 @@ pub const DEFAULT_SYSTEM: &str = "You are Linux AI, a helpful assistant embedded
 You can inspect and act on the user's computer through the provided tools (reading and writing files, \
 listing directories, searching, querying system info, running shell commands, and opening files/URLs). \
 Prefer the dedicated file tools over shell when possible. Be concise. Explain what you are about to do \
-before destructive actions. When a tool returns an error, adapt rather than repeating the same call.";
+before destructive actions. When a tool returns an error, adapt rather than repeating the same call. \
+The shell runs non-interactively with no terminal, so commands cannot prompt for input; `sudo` will fail \
+unless it needs no password. If a task requires elevated privileges or interactive input, give the user the \
+exact command to run themselves instead of retrying.";
 
 /// Events streamed to a client (CLI or desktop) during a turn. Serialized with
 /// an adjacent `type`/`data` tag so the desktop frontend can discriminate.
@@ -118,13 +122,17 @@ impl Agent {
         &self.registry
     }
 
-    /// Run one user turn to completion, streaming events to `sink`.
+    /// Run one user turn to completion, streaming events to `sink`. The turn can
+    /// be interrupted at any time via `cancel`: in-flight streaming stops, any
+    /// partial assistant text is persisted, and a `Done` event is emitted so the
+    /// conversation is left in a consistent state.
     pub async fn run_turn(
         &self,
         conversation_id: &str,
         user_input: &str,
         approver: Approver,
         sink: UnboundedSender<AgentEvent>,
+        cancel: CancellationToken,
     ) -> Result<()> {
         let approver: Approver = if self.auto_approve {
             auto_approver()
@@ -136,6 +144,11 @@ impl Agent {
             .append_message(conversation_id, &Message::user(user_input))?;
 
         for _ in 0..self.max_iterations {
+            if cancel.is_cancelled() {
+                let _ = sink.send(AgentEvent::Done);
+                return Ok(());
+            }
+
             let messages = self.store.load_messages(conversation_id)?;
             let req = ChatRequest {
                 model: self.model.clone(),
@@ -156,23 +169,51 @@ impl Agent {
 
             let mut assistant_text = String::new();
             let mut tool_calls = Vec::new();
+            let mut cancelled = false;
 
             use futures::StreamExt;
-            while let Some(event) = stream.next().await {
-                match event {
-                    Ok(ChatEvent::TextDelta(t)) => {
-                        assistant_text.push_str(&t);
-                        let _ = sink.send(AgentEvent::TextDelta(t));
+            loop {
+                tokio::select! {
+                    biased;
+                    _ = cancel.cancelled() => {
+                        cancelled = true;
+                        break;
                     }
-                    Ok(ChatEvent::ToolCall(call)) => tool_calls.push(call),
-                    Ok(ChatEvent::Usage(u)) => {
-                        let _ = sink.send(AgentEvent::Usage(u));
-                    }
-                    Err(e) => {
-                        let _ = sink.send(AgentEvent::Error(e.to_string()));
-                        return Err(e);
+                    event = stream.next() => {
+                        match event {
+                            Some(Ok(ChatEvent::TextDelta(t))) => {
+                                assistant_text.push_str(&t);
+                                let _ = sink.send(AgentEvent::TextDelta(t));
+                            }
+                            Some(Ok(ChatEvent::ToolCall(call))) => tool_calls.push(call),
+                            Some(Ok(ChatEvent::Usage(u))) => {
+                                let _ = sink.send(AgentEvent::Usage(u));
+                            }
+                            Some(Err(e)) => {
+                                let _ = sink.send(AgentEvent::Error(e.to_string()));
+                                return Err(e);
+                            }
+                            None => break,
+                        }
                     }
                 }
+            }
+
+            // Drop the stream so the provider connection closes immediately on
+            // cancellation rather than at the end of the iteration.
+            drop(stream);
+
+            // On cancellation, persist only the partial assistant text (no
+            // pending tool calls are run) and stop cleanly.
+            if cancelled {
+                if !assistant_text.is_empty() {
+                    self.store.append_message(
+                        conversation_id,
+                        &Message::assistant(vec![ContentBlock::text(assistant_text)]),
+                    )?;
+                }
+                let _ = sink.send(AgentEvent::Done);
+                return Ok(());
             }
 
             // Persist the assistant message (text + any tool-use blocks).
@@ -197,12 +238,24 @@ impl Agent {
                 return Ok(());
             }
 
-            // Execute each tool call, gathering tool_result blocks.
+            // Execute each tool call, gathering tool_result blocks. If cancelled
+            // mid-way, remaining calls still get a result block so every
+            // tool_use stays paired with a tool_result (providers require this).
             let mut result_blocks = Vec::new();
             for call in tool_calls {
-                let (output, is_error) =
+                let (output, is_error) = if cancel.is_cancelled() {
+                    let msg = "Cancelled by user.".to_string();
+                    let _ = sink.send(AgentEvent::ToolCompleted {
+                        id: call.id.clone(),
+                        name: call.name.clone(),
+                        output: msg.clone(),
+                        is_error: true,
+                    });
+                    (msg, true)
+                } else {
                     self.execute_tool(conversation_id, &call.id, &call.name, &call.input, &approver, &sink)
-                        .await;
+                        .await
+                };
                 result_blocks.push(ContentBlock::ToolResult {
                     tool_use_id: call.id,
                     content: output,
@@ -217,6 +270,11 @@ impl Agent {
                     content: result_blocks,
                 },
             )?;
+
+            if cancel.is_cancelled() {
+                let _ = sink.send(AgentEvent::Done);
+                return Ok(());
+            }
         }
 
         let _ = sink.send(AgentEvent::Done);

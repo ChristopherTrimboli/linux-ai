@@ -41,6 +41,7 @@ model = "gpt-4o-transcribe"
 [tools]
 auto_approve = false
 file_roots = []          # empty = home directory only
+shell_timeout_secs = 120
 ```
 
 ## Tool policy
@@ -50,3 +51,14 @@ file_roots = []          # empty = home directory only
 | `auto_approve` | Run mutating tools without prompting |
 | `file_roots` | Filesystem roots the agent may read/write (empty = home only) |
 | `shell_deny` | Substrings that cause an automatic shell-command denial |
+| `shell_timeout_secs` | Kill a `run_shell` command after this many seconds (default 120) |
+
+### Shell commands are non-interactive
+
+`run_shell` runs with no terminal and stdin closed, so commands can't prompt for
+input. `sudo` is automatically run as `sudo -n` (non-interactive); if it needs a
+password it fails fast instead of hanging, and the agent is told to ask you to
+run the command yourself in a terminal. Any command that still blocks is killed
+after `shell_timeout_secs`. To allow privileged commands without a prompt, give
+your user passwordless sudo for them (via `sudoers`) at your own discretion —
+the app will never modify your sudo configuration.

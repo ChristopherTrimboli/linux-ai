@@ -74,7 +74,14 @@ parts:
       npm ci
       npm run tauri build -- --bundles deb
 
-      deb="$(ls src-tauri/target/release/bundle/deb/*.deb | head -n1)"
+      # This is a Cargo workspace, so Tauri writes the bundle to the workspace
+      # target dir (repo root), not under desktop/src-tauri. Find it wherever it
+      # landed to be robust to layout changes.
+      deb="$(find "$CRAFT_PART_BUILD" -path '*/release/bundle/deb/*.deb' | head -n1)"
+      if [ -z "$deb" ]; then
+        echo "no .deb produced by tauri build" >&2
+        exit 1
+      fi
       dpkg -x "$deb" "$CRAFT_PART_INSTALL"
 
       # Normalize the binary, desktop entry and icon to a stable snap name so the

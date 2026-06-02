@@ -191,10 +191,20 @@ fn cli_approver() -> Approver {
 async fn drive_turn(agent: Arc<Agent>, conversation_id: String, input: String) {
     let (tx, mut rx) = mpsc::unbounded_channel::<AgentEvent>();
     let approver = cli_approver();
+    let cancel = la_core::CancellationToken::new();
+
+    // Ctrl-C interrupts the in-flight turn cleanly (partial output is kept).
+    let cancel_sig = cancel.clone();
+    let sig_handle = tokio::spawn(async move {
+        if tokio::signal::ctrl_c().await.is_ok() {
+            cancel_sig.cancel();
+        }
+    });
+
     let agent2 = agent.clone();
     let convo = conversation_id.clone();
     let handle = tokio::spawn(async move {
-        let _ = agent2.run_turn(&convo, &input, approver, tx).await;
+        let _ = agent2.run_turn(&convo, &input, approver, tx, cancel).await;
     });
 
     let mut stdout = std::io::stdout();
@@ -231,6 +241,7 @@ async fn drive_turn(agent: Arc<Agent>, conversation_id: String, input: String) {
         }
     }
     let _ = handle.await;
+    sig_handle.abort();
 }
 
 async fn one_shot(

@@ -48,6 +48,7 @@ async fn agent_runs_tool_then_finishes() {
     let ctx = ToolContext {
         file_roots: vec![std::env::temp_dir()],
         shell_deny: vec![],
+        shell_timeout_secs: 120,
     };
     let agent = Arc::new(Agent::with_provider(
         provider,
@@ -62,7 +63,13 @@ async fn agent_runs_tool_then_finishes() {
     let convo_id = convo.id.clone();
     tokio::spawn(async move {
         agent2
-            .run_turn(&convo_id, "how much memory do I have?", auto_approver(), tx)
+            .run_turn(
+                &convo_id,
+                "how much memory do I have?",
+                auto_approver(),
+                tx,
+                la_core::CancellationToken::new(),
+            )
             .await
             .unwrap();
     });
