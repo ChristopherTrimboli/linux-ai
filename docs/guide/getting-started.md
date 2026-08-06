@@ -2,7 +2,7 @@
 
 A Linux-first AI chat app that can act on your computer through a small set
 of built-in tools, available as both a desktop app and a CLI. Bring your own API
-key (Anthropic, OpenAI, or any OpenAI-compatible endpoint, including a local one).
+key (Anthropic, OpenAI, xAI/Grok, or any OpenAI-compatible endpoint, including a local one).
 
 - **Desktop app** — Tauri 2 (Rust) + Svelte 5. Tiny, fast, native WebKitGTK.
 - **CLI (`lai`)** — one-shot prompts, stdin piping, and an interactive chat REPL.

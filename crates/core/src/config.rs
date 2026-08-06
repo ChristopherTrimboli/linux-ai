@@ -172,6 +172,27 @@ impl Default for Config {
                 ],
             },
         );
+        // xAI Grok — OpenAI-compatible Chat Completions at https://api.x.ai/v1
+        // (https://docs.x.ai/docs/models). `grok-4.5` is the flagship; aliases
+        // track the latest pin automatically.
+        providers.insert(
+            "xai".to_string(),
+            ProviderConfig {
+                kind: ProviderKind::Openai,
+                base_url: Some("https://api.x.ai/v1".to_string()),
+                api_key_env: Some("XAI_API_KEY".to_string()),
+                api_key: None,
+                models: vec![
+                    "grok-4.5".to_string(),
+                    "grok-4.5-latest".to_string(),
+                    "grok-4.3".to_string(),
+                    "grok-4.20-0309-reasoning".to_string(),
+                    "grok-4.20-0309-non-reasoning".to_string(),
+                    "grok-4.20-multi-agent-0309".to_string(),
+                    "grok-build-0.1".to_string(),
+                ],
+            },
+        );
         providers.insert(
             "local".to_string(),
             ProviderConfig {
@@ -207,6 +228,10 @@ impl Config {
     }
 
     /// Load config from disk, creating a default file if none exists.
+    ///
+    /// Missing built-in providers from newer releases (e.g. `xai`) are merged
+    /// in from [`Config::default`] without overwriting user customizations, and
+    /// the file is rewritten only when something was added.
     pub fn load() -> Result<Config> {
         let path = Self::config_path()?;
         if !path.exists() {
@@ -215,9 +240,27 @@ impl Config {
             return Ok(cfg);
         }
         let text = std::fs::read_to_string(&path)?;
-        let cfg: Config =
+        let mut cfg: Config =
             toml::from_str(&text).map_err(|e| Error::Config(format!("parse {path:?}: {e}")))?;
+        if cfg.merge_missing_providers() {
+            // Best-effort persist so the new provider shows up in config.toml.
+            let _ = cfg.save();
+        }
         Ok(cfg)
+    }
+
+    /// Insert any built-in providers the on-disk config is missing. Returns
+    /// `true` if at least one provider was added.
+    fn merge_missing_providers(&mut self) -> bool {
+        let defaults = Config::default();
+        let mut added = false;
+        for (name, provider) in defaults.providers {
+            if let std::collections::btree_map::Entry::Vacant(slot) = self.providers.entry(name) {
+                slot.insert(provider);
+                added = true;
+            }
+        }
+        added
     }
 
     pub fn save(&self) -> Result<()> {

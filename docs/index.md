@@ -31,7 +31,7 @@ features:
     details: Native microphone capture transcribed via OpenAI, OpenRouter, or a fully local whisper server.
   - icon: 🔌
     title: Bring your own model
-    details: Anthropic, OpenAI, OpenRouter, or any OpenAI-compatible / local endpoint (Ollama, LM Studio, …).
+    details: Anthropic, OpenAI, xAI/Grok, OpenRouter, or any OpenAI-compatible / local endpoint (Ollama, LM Studio, …).
   - icon: 💻
     title: Desktop + CLI
     details: A Tauri 2 / Svelte 5 desktop app and a `lai` command line, sharing one Rust core.

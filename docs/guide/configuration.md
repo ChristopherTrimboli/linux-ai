@@ -9,7 +9,7 @@ Keys are resolved in this order:
 
 1. **OS keyring** (service `linux-ai`, account = provider name)
 2. **Environment variable** (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
-   `OPENROUTER_API_KEY`, …)
+   `OPENROUTER_API_KEY`, `XAI_API_KEY`, …)
 3. **Plaintext `api_key`** in the config file (lowest precedence)
 
 Store keys with `lai auth <provider>` or via the desktop **Settings** panel. On
@@ -18,15 +18,30 @@ env/config fallback is used.
 
 ## Providers
 
-Out of the box there are providers for **Anthropic**, **OpenAI**, **OpenRouter**
-(access 400+ models behind one key, e.g. `openrouter/auto`), and a **local**
-OpenAI-compatible endpoint (Ollama). Add any other OpenAI-compatible endpoint by
-editing the `[providers.*]` tables in the config and pointing `base_url` at it.
+Out of the box there are providers for **Anthropic**, **OpenAI**, **xAI** (Grok),
+**OpenRouter** (access 400+ models behind one key, e.g. `openrouter/auto`), and a
+**local** OpenAI-compatible endpoint (Ollama). Add any other OpenAI-compatible
+endpoint by editing the `[providers.*]` tables in the config and pointing
+`base_url` at it.
 
 ```toml
-default_provider = "openrouter"
-default_model = "anthropic/claude-sonnet-4.6"
+default_provider = "xai"
+default_model = "grok-4.5"
 max_tokens = 4096
+
+[providers.xai]
+kind = "openai"
+base_url = "https://api.x.ai/v1"
+api_key_env = "XAI_API_KEY"
+models = [
+  "grok-4.5",
+  "grok-4.5-latest",
+  "grok-4.3",
+  "grok-4.20-0309-reasoning",
+  "grok-4.20-0309-non-reasoning",
+  "grok-4.20-multi-agent-0309",
+  "grok-build-0.1",
+]
 
 [providers.openrouter]
 kind = "openai"
@@ -43,6 +58,14 @@ auto_approve = false
 file_roots = []          # empty = home directory only
 shell_timeout_secs = 120
 ```
+
+### xAI / Grok
+
+Uses the OpenAI-compatible Chat Completions API at `https://api.x.ai/v1` with an
+`XAI_API_KEY` from the [xAI console](https://console.x.ai/). `grok-4.5` is the
+flagship (500k context, reasoning, function calling, image input); `grok-4.5-latest`
+always tracks the newest pin. See [xAI models](https://docs.x.ai/docs/models) for
+pricing and the full catalog.
 
 ## Tool policy
 

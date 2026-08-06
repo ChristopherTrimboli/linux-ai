@@ -20,7 +20,7 @@ As an avid Ubuntu user I was horribly disgusted with the lack of support for Lin
 
 A Linux-first AI chat app that can act on your computer through a small set of
 built-in tools, available as both a desktop app and a CLI. Bring your own API key
-(Anthropic, OpenAI, or any OpenAI-compatible endpoint, including a local one).
+(Anthropic, OpenAI, xAI/Grok, or any OpenAI-compatible endpoint, including a local one).
 
 - **Desktop app** — Tauri 2 (Rust) + Svelte 5. Tiny, fast, native WebKitGTK.
 - **CLI (`lai`)** — one-shot prompts, stdin piping, and an interactive chat REPL.
@@ -168,14 +168,20 @@ lai -y "tidy up ~/Downloads"          # auto-approve tool actions for this run
 - Config: `~/.config/linux-ai/config.toml` (created on first run).
 - History: `~/.local/share/linux-ai/linux-ai.db` (SQLite).
 - API keys are resolved in this order: **OS keyring** → environment variable
-  (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, ...) → plaintext
+  (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `XAI_API_KEY`, ...) → plaintext
   `api_key` in the config. Store keys with `lai auth <provider>` or via the desktop
   Settings panel.
 
-Out of the box there are providers for **Anthropic**, **OpenAI**, **OpenRouter**
-(access 400+ models behind one key, e.g. `openrouter/auto`), and a **local**
-OpenAI-compatible endpoint (Ollama). You can add any other OpenAI-compatible endpoint
-by editing the `[providers.*]` tables in the config and pointing `base_url` at it.
+Out of the box there are providers for **Anthropic**, **OpenAI**, **xAI** (Grok 4.5
+and related models via `https://api.x.ai/v1`), **OpenRouter** (access 400+ models
+behind one key, e.g. `openrouter/auto`), and a **local** OpenAI-compatible endpoint
+(Ollama). You can add any other OpenAI-compatible endpoint by editing the
+`[providers.*]` tables in the config and pointing `base_url` at it.
+
+```bash
+lai auth xai                 # store XAI_API_KEY in the OS keyring
+lai -p xai -m grok-4.5 "hi"  # one-shot with Grok 4.5
+```
 
 ## Security model
 

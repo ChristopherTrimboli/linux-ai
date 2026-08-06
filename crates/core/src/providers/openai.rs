@@ -1,5 +1,6 @@
 //! OpenAI Chat Completions compatible provider. Works with OpenAI as well as
-//! any compatible endpoint (Ollama, LM Studio, vLLM, ...) via a custom base URL.
+//! any compatible endpoint (xAI/Grok, OpenRouter, Ollama, LM Studio, vLLM, ...)
+//! via a custom base URL.
 
 use async_trait::async_trait;
 use eventsource_stream::Eventsource;

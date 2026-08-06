@@ -8,11 +8,11 @@ cat error.log | lai "explain this"    # pipe stdin into the prompt
 lai chat                              # interactive REPL (Ctrl-D / 'exit' to quit)
 
 lai providers                         # list providers and whether a key is set
-lai models openai                     # list known models for a provider
-lai auth anthropic                    # store an API key in the OS keyring
+lai models xai                        # list known models for a provider
+lai auth xai                          # store an API key in the OS keyring
 lai config                            # show config + data file locations
 
-lai -p openai -m gpt-4o "hello"       # override provider/model for one run
+lai -p xai -m grok-4.5 "hello"        # override provider/model for one run
 lai -y "tidy up ~/Downloads"          # auto-approve tool actions for this run
 ```
 
